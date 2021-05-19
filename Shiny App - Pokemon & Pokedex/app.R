@@ -1,5 +1,6 @@
 library(shinydashboard)
 library(shiny)
+library(shinyWidgets)
 
 require(pacman)
 
@@ -11,9 +12,6 @@ p_load(tidyverse,
        purrr,
        plotly)
 
-
-
-setwd("C:/Users/youid/Documents/GitHub/Tidy-Tuesday/Shiny App - Pokemon & Pokedex")
 source("shinyAppFunctions.R")
 data <- read.csv("PokedexEntries.csv")
 data <- tibble(data[,-1])
@@ -61,9 +59,7 @@ ui <- dashboardPage(
         sidebarMenu(
             menuItem("Individual Pokemon",
                 tabName = "indiv_pkmn_tab"),
-            menuItem("All Pokemon",
-                tabName = "all_pkmn"),
-            menuItem("By Generation",
+            menuItem("Filter by Category",
                      tabName = "generation_pkmn")
         )
     ),
@@ -72,33 +68,36 @@ ui <- dashboardPage(
         tabItems(
         tabItem(
             tabName = "indiv_pkmn_tab",
-
                 box(
                     uiOutput("name"),
-                    plotlyOutput("pkmn_stats"),
-                    width = 10
+                    width = 12
                     ),
-                box(
-                    plotOutput("pkmn_word_count"),
-                    width = 10
-                    ),
+            
+                tabBox(
+                    tabPanel("Combat Statistics", plotlyOutput("pkmn_stats")),
+                    tabPanel("Word Count", plotOutput("pkmn_word_count")),
+                    width = 12
+                )
             ),
 
-        #All Pokemon tab content
-        tabItem(
-            tabName = "all_pkmn",
-            box(
-                plotOutput("all_word_count"),
-                width = 10
-            )
-            ),
-        #Generation Pokemon tab content
+        #Filter on Pokemon tab content
         tabItem(
             tabName = "generation_pkmn",
             box(
                 uiOutput("generation"),
+                width = 4
+                ),
+            box(
+                uiOutput("type1"), 
+                width = 4
+                ),
+            box(
+                uiOutput("legendary"), 
+                width = 4
+            ),
+            box(
                 plotOutput("generation_word_count"),
-                width = 10
+                width = 12
             )
         )
         )
@@ -119,24 +118,45 @@ server <- function(input, output) {
     })
 
     output$generation <- renderUI({
-        selectInput(
+        pickerInput(
             inputId = "generation",
             label = "Generation",
-            choices = statsData %>% select(generation) %>% distinct()
+            choices = statsData %>% select(generation) %>% unique(),
+            selected = 1,
+            options = list(
+                `actions-box` = TRUE
+            ), 
+            multiple = TRUE
         )
 
     })
 
-    output$all_word_count <- renderPlot({
-        tidyData %>%
-            count(word, sort = TRUE) %>%
-            filter(n > 1) %>%
-            mutate(word = reorder(word, n)) %>%
-            head(25) %>%
-            ggplot(aes(n, word)) +
-            geom_col() +
-            labs(y = NULL) +
-            ggtitle("Most Frequent Words in Pokedex")
+    output$type1 <- renderUI({
+        pickerInput(
+            inputId = "type1",
+            label = "Type 1",
+            choices = statsData %>% select(type1) %>% distinct(),
+            selected = 'fire',
+            options = list(
+                `actions-box` = TRUE
+            ), 
+            multiple = TRUE
+        )
+        
+    })
+    
+    output$legendary <- renderUI({
+        pickerInput(
+            inputId = "legendary",
+            label = "Legendary",
+            choices = statsData %>% select(is_legendary) %>% distinct(),
+            selected = 0,
+            options = list(
+                `actions-box` = TRUE
+            ), 
+            multiple = TRUE
+        )
+        
     })
 
     output$pkmn_word_count <- renderPlot({
@@ -151,20 +171,22 @@ server <- function(input, output) {
         ggplot(prepData, aes(n, word)) +
             geom_col() +
             labs(y = NULL) +
-            ggtitle(paste0("Most Frequent Words in Pokedex for ", input$name))
+            ggtitle(paste0("Most Frequent Words in Pokedex for ", input$name)) 
 
     })
 
     output$generation_word_count <- renderPlot({
 
         filt <- statsData %>%
-            select(name, generation)
+            select(name, generation, type1, is_legendary)
 
         prepData <- tidyData %>%
             left_join(filt, by = c("Pokemon" = "name"))
 
         prepData <- prepData %>%
-            filter(generation == input$generation) %>%
+            filter(generation %in% input$generation,
+                   type1 %in% input$type1,
+                   is_legendary %in% input$legendary) %>%
             count(word, sort = TRUE) %>%
             filter(n > 1) %>%
             mutate(word = reorder(word, n)) %>%
@@ -173,7 +195,7 @@ server <- function(input, output) {
         ggplot(prepData, aes(n, word)) +
             geom_col() +
             labs(y = NULL) +
-            ggtitle(paste0("Most Frequent Words in Pokedex for Generation ", input$generation))
+            ggtitle(paste0("Most Frequent Words in Pokedex"))
 
     })
 
