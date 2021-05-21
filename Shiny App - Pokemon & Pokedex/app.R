@@ -1,16 +1,17 @@
 library(shinydashboard)
 library(shiny)
 library(shinyWidgets)
+library(tidyverse)
+library(tidytext)
+library(textdata)
+library(tokenizers)
+library(purrr)
+library(plotly)
+library(tm)
+library(topicmodels)
+library(reshape2)
 
-require(pacman)
-
-p_load(tidyverse,
-       tidytext,
-       ggplot2,
-       textdata,
-       tokenizers,
-       purrr,
-       plotly)
+nrcData <- read.csv("NRC_Download.csv")
 
 source("shinyAppFunctions.R")
 data <- read.csv("PokedexEntries.csv")
@@ -22,8 +23,8 @@ data(stop_words)
 stop_words <- stop_words %>%
     add_row(word = "it’s", lexicon = "SMART") %>%
     add_row(word = "it’ll", lexicon = "SMART") %>%
-    add_row(word = "pokémon", lexicon = "SMART") %>%
-    add_row(word = "pokémon’s", lexicon = "SMART")
+    add_row(word = "pokemon", lexicon = "SMART") %>%
+    add_row(word = "pokemon’s", lexicon = "SMART")
 
 #Create tidy data for analysis
 tidyData <- data %>%
@@ -59,13 +60,13 @@ statsData <- statsData %>%
 
 ui <- dashboardPage(
     skin = "red",
-    dashboardHeader(title = "Pokémon Shiny App"),
+    dashboardHeader(title = "Pokédex Analysis"),
 
     dashboardSidebar(
         sidebarMenu(
             menuItem("Individual Pokémon",
                 tabName = "indiv_pkmn_tab"),
-            menuItem("Pokédex Common Words",
+            menuItem("Pokédex NLP",
                      tabName = "generation_pkmn")
         )
     ),
@@ -91,21 +92,28 @@ ui <- dashboardPage(
             tabName = "generation_pkmn",
             box(
                 uiOutput("generation"),
-                width = 4
+                width = 3
                 ),
             box(
                 uiOutput("type1"), 
-                width = 4
+                width = 3
                 ),
             box(
                 uiOutput("legendary"), 
-                width = 4
+                width = 3
+            ),
+            box(
+                uiOutput("sentiment"), 
+                width = 3
             ),
             tabBox(
                 tabPanel("Words", plotOutput("word_count")),
                 tabPanel("Bigrams", plotOutput("bigram_count")),
+                tabPanel("Topic Modelling", plotOutput("topic_model")),
+                tabPanel("Sentiment Analysis", plotOutput("sentiment_analysis")),
                 width = 12
             )
+            
         )
         )
 
@@ -143,7 +151,7 @@ server <- function(input, output) {
             inputId = "type1",
             label = "Type 1",
             choices = statsData %>% select(type1) %>% distinct(),
-            selected = 'fire',
+            selected = c('fire', 'water', 'grass', 'electric'),
             options = list(
                 `actions-box` = TRUE
             ), 
@@ -166,6 +174,22 @@ server <- function(input, output) {
         
     })
 
+    output$sentiment <- renderUI({
+        pickerInput(
+            inputId = "sentiment",
+            label = "NRC Sentiment",
+            choices = c("trust", "fear", "negative", "sadness", "anger",
+                        "anticipation", "disgust", "joy", "positive",
+                        "surprise"),
+            selected = "trust",
+            options = list(
+                `actions-box` = TRUE
+            ), 
+            multiple = TRUE
+        )
+        
+    })
+    
     output$pkmn_word_count <- renderPlot({
 
         prepData <- tidyData %>%
@@ -208,6 +232,75 @@ server <- function(input, output) {
 
     })
 
+    output$topic_model <- renderPlot({
+        tm <- data %>%
+            unnest_tokens(word, PokedexEntry) %>%
+            anti_join(stop_words) %>%
+            count(Pokemon, word, sort=TRUE) 
+        
+        filt <- statsData %>%
+            select(name, generation, type1, is_legendary)
+        
+        tm <- tm %>%
+            left_join(filt, by = c("Pokemon" = "name")) %>%
+            filter(generation %in% input$generation,
+                   type1 %in% input$type1,
+                   is_legendary %in% input$legendary)
+        
+        dtm<- tm %>%
+            select(Pokemon, word) %>%
+            group_by(Pokemon, word) %>%
+            tally() %>%
+            set_names("document", "term", "count") %>%
+            cast_dtm(document, term, count)
+        
+        lda <-  LDA(dtm, 
+                    k = 4, 
+                    control = list(seed = 1234))
+        
+        topics <- tidy(lda, matrix = "beta")
+        
+        top_terms <- topics %>%
+            group_by(topic) %>%
+            slice_max(beta, n = 10) %>% 
+            ungroup() %>%
+            arrange(topic, -beta) 
+        
+        top_terms %>%
+            mutate(term = reorder_within(term, beta, topic)) %>%
+            ggplot(aes(beta, term, fill = factor(topic))) +
+            geom_col(show.legend = FALSE) +
+            facet_wrap(~ topic, scales = "free") +
+            scale_y_reordered()
+    })
+    
+    output$sentiment_analysis <- renderPlot({
+        nrc <- nrcData %>% 
+            filter(sentiment %in% input$sentiment)
+        
+        filt <- statsData %>%
+            select(name, generation, type1, is_legendary)
+        
+        prepData <- tidyData %>%
+            left_join(filt, by = c("Pokemon" = "name"))
+        
+        prepData <- prepData %>%
+            filter(generation %in% input$generation,
+                   type1 %in% input$type1,
+                   is_legendary %in% input$legendary) %>%
+            inner_join(nrc) %>%
+            count(word, sort = TRUE) %>%
+            mutate(word= reorder(word, n)) %>%
+            head(25)
+        
+        ggplot(prepData, aes(n, word)) +
+            geom_col() +
+            labs(y = NULL, x = "Frequency",
+                 title = "Most Common Sentiment-Assocatiated Words in Pokedex",
+                 subtitle = "Stop Words Removed",
+                 caption = "NRC Data Source - Saif M. Mohammad and Peter Turney. \n(2013) ''Crowdsourcing a Word-Emotion Association Lexicon.'' Computational Intelligence, 29(3): 436-465.")
+    })
+    
     output$bigram_count <- renderPlot({
         filt <- statsData %>%
             select(name, generation, type1, is_legendary)

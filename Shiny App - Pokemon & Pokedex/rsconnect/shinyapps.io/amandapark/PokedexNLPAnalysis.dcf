@@ -1,0 +1,13 @@
+name: PokedexNLPAnalysis
+title: PokedexNLPAnalysis
+username:
+account: amandapark
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 4165694
+bundleId: 4625781
+url: https://amandapark.shinyapps.io/PokedexNLPAnalysis/
+when: 1621628513.07811
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: .RData|TM.Rmd
