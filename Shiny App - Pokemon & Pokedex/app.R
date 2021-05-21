@@ -19,6 +19,12 @@ data <- tibble(data[,-1])
 #Load stopwords
 data(stop_words)
 
+stop_words <- stop_words %>%
+    add_row(word = "it’s", lexicon = "SMART") %>%
+    add_row(word = "it’ll", lexicon = "SMART") %>%
+    add_row(word = "pokémon", lexicon = "SMART") %>%
+    add_row(word = "pokémon’s", lexicon = "SMART")
+
 #Create tidy data for analysis
 tidyData <- data %>%
     unnest_tokens(word, PokedexEntry) %>%
@@ -53,13 +59,13 @@ statsData <- statsData %>%
 
 ui <- dashboardPage(
     skin = "red",
-    dashboardHeader(title = "Pokemon Shiny App"),
+    dashboardHeader(title = "Pokémon Shiny App"),
 
     dashboardSidebar(
         sidebarMenu(
-            menuItem("Individual Pokemon",
+            menuItem("Individual Pokémon",
                 tabName = "indiv_pkmn_tab"),
-            menuItem("Filter by Category",
+            menuItem("Pokédex Common Words",
                      tabName = "generation_pkmn")
         )
     ),
@@ -95,8 +101,9 @@ ui <- dashboardPage(
                 uiOutput("legendary"), 
                 width = 4
             ),
-            box(
-                plotOutput("generation_word_count"),
+            tabBox(
+                tabPanel("Words", plotOutput("word_count")),
+                tabPanel("Bigrams", plotOutput("bigram_count")),
                 width = 12
             )
         )
@@ -168,14 +175,75 @@ server <- function(input, output) {
             mutate(word = reorder(word, n)) %>%
             head(10)
 
+        type <- statsData %>%
+            filter(name == input$name) %>%
+            select(type1)
+        
+        fill_color <- case_when(
+            type == 'grass' ~ '#7AC74C',
+            type == 'fire' ~ '#EE8130',
+            type == 'water' ~ '#6390F0',
+            type == 'fighting' ~ '#C22E28',
+            type == 'poison' ~ '#A33EA1',
+            type == 'normal' ~ '#A8A77A',
+            type == 'ice' ~ '#96D9D6',
+            type == 'dark' ~ '#705746',
+            type == 'steel' ~ '#B7B7CE',
+            type == 'fairy' ~ '#D685AD',
+            type == 'psychic' ~ '#F95587',
+            type == 'rock' ~ '#B6A136',
+            type == 'ghost' ~ '#735797', 
+            type == 'bug' ~ '#A6B91A',
+            type == 'dragon' ~ '#6F35FC',
+            type == 'flying' ~ '#A98FF3',
+            type == 'ground' ~ '#E2BF65',
+            type == 'electric' ~ '#F7D02C',
+            TRUE ~ 'black'
+        )
+        
         ggplot(prepData, aes(n, word)) +
-            geom_col() +
-            labs(y = NULL) +
+            geom_col(fill = fill_color) +
+            labs(y = NULL, x = "Frequency") +
             ggtitle(paste0("Most Frequent Words in Pokedex for ", input$name)) 
 
     })
 
-    output$generation_word_count <- renderPlot({
+    output$bigram_count <- renderPlot({
+        filt <- statsData %>%
+            select(name, generation, type1, is_legendary)
+        
+        bigrams <- data %>%
+            unnest_tokens(ngram, PokedexEntry, token = "ngrams", n = 2) 
+        
+        bigrams_sep <- bigrams %>%
+            separate(ngram, c("word1", "word2"), sep = " ")
+        
+        bigrams_filt <- bigrams_sep %>%
+            filter(!word1 %in% stop_words$word) %>%
+            filter(!word2 %in% stop_words$word) %>%
+            unite(ngram, word1, word2, sep = " ")
+        
+        prepData <- bigrams_filt %>%
+            left_join(filt, by = c("Pokemon" = "name"))
+        
+        prepData <- prepData %>%
+            filter(generation %in% input$generation,
+                   type1 %in% input$type1,
+                   is_legendary %in% input$legendary) %>%
+            count(ngram, sort = TRUE) %>%
+            filter(n > 1) %>%
+            mutate(ngram = reorder(ngram, n)) %>%
+            head(25)
+        
+        ggplot(prepData, aes(n, ngram)) +
+            geom_col() +
+            labs(y = NULL, x = "Frequency",
+                 title = "Most Frequent Bigrams in Pokedex",
+                 subtitle = "Stop Words Removed")
+        
+    })
+    
+    output$word_count <- renderPlot({
 
         filt <- statsData %>%
             select(name, generation, type1, is_legendary)
@@ -194,8 +262,9 @@ server <- function(input, output) {
 
         ggplot(prepData, aes(n, word)) +
             geom_col() +
-            labs(y = NULL) +
-            ggtitle(paste0("Most Frequent Words in Pokedex"))
+            labs(y = NULL, x = "Frequency",
+                 title = "Most Frequent Words in Pokedex",
+                 subtitle = "Stop Words Removed")
 
     })
 
