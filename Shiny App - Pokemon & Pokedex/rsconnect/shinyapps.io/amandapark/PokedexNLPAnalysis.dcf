@@ -5,9 +5,9 @@ account: amandapark
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 4165694
-bundleId: 4625781
+bundleId: 4654698
 url: https://amandapark.shinyapps.io/PokedexNLPAnalysis/
-when: 1621628513.07811
+when: 1622300634.41508
 asMultiple: FALSE
 asStatic: FALSE
 ignoredFiles: .RData|TM.Rmd
