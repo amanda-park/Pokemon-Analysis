@@ -8,11 +8,9 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-require(pacman)
-
-p_load(tidyverse,
-       rvest,
-       rversions)
+require(tidyverse)
+require(rvest)
+require(rversions)
 ```
 
 ## Scrape Data
@@ -72,7 +70,7 @@ for(i in 1:nrow(pokedexData)) {
 #Remove dummy observation
 df <- df[-1,]
 
-write.csv(df, "PokedexEntries.csv")
+write.csv(df, "PokedexEntriesGen9.csv")
 
 ```
 
