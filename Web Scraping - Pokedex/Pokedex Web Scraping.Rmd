@@ -70,7 +70,9 @@ for(i in 1:nrow(pokedexData)) {
 #Remove dummy observation
 df <- df[-1,]
 
-write.csv(df, "PokedexEntriesGen9.csv")
+writexl::write_xlsx(df, "Pokedex_Entries_Gen9_DLC.xlsx")
+
+#write.csv(df, "PokedexEntriesGen9.csv")
 
 ```
 
