@@ -1,0 +1,430 @@
+---
+title: "Pokedex Dashboard"
+author: "Amanda Park"
+format: 
+  dashboard: 
+    theme: journal
+    scrolling: true
+server: shiny
+---
+
+```{r}
+#| context: setup
+
+library(tidyverse)
+library(readxl)
+library(plotly)
+
+source("functions.r")
+
+#Enhancements: Needs to separate out Alolan/Galarian/etc forms, Pokedex did combine them... but seems like original descriptions won out for the most part
+pokedex_data <- readxl::read_excel("data/Pokedex_Entries_Humorous_Summaries.xlsx")
+
+#Enhancements: Add Gigantamax (?), additional stats like height, weight, etc.?
+stats_data <- readxl::read_excel("data/pokemon_stats_gen9_update.xlsx") |> 
+  mutate(
+    Generation = as.factor(Generation),
+    is_grass = if_else(type1 == "grass", 1, if_else(type2 == "grass", 1, 0, missing = 0)),
+    is_normal = if_else(type1 == "normal", 1, if_else(type2 == "normal", 1, 0, missing = 0)),
+    is_fire = if_else(type1 == "fire", 1, if_else(type2 == "fire", 1, 0, missing = 0)),
+    is_water = if_else(type1 == "water", 1, if_else(type2 == "water", 1, 0, missing = 0)),
+    is_ground = if_else(type1 == "ground", 1, if_else(type2 == "ground", 1, 0, missing = 0)),
+    is_rock = if_else(type1 == "rock", 1, if_else(type2 == "rock", 1, 0, missing = 0)),
+    is_ice = if_else(type1 == "ice", 1, if_else(type2 == "ice", 1, 0, missing = 0)),
+    is_electric = if_else(type1 == "electric", 1, if_else(type2 == "electric", 1, 0, missing = 0)),
+    is_psychic = if_else(type1 == "psychic", 1, if_else(type2 == "psychic", 1, 0, missing = 0)),
+    is_ghost = if_else(type1 == "ghost", 1, if_else(type2 == "ghost", 1, 0, missing = 0)),
+    is_dark = if_else(type1 == "dark", 1, if_else(type2 == "dark", 1, 0, missing = 0)),
+    is_fighting = if_else(type1 == "fighting", 1, if_else(type2 == "fighting", 1, 0, missing = 0)),
+    is_dragon = if_else(type1 == "dragon", 1, if_else(type2 == "dragon", 1, 0, missing = 0)),
+    is_fairy = if_else(type1 == "fairy", 1, if_else(type2 == "fairy", 1, 0, missing = 0)),
+    is_bug = if_else(type1 == "bug", 1, if_else(type2 == "bug", 1, 0, missing = 0)),
+    is_poison = if_else(type1 == "poison", 1, if_else(type2 == "poison", 1, 0, missing = 0)),
+    is_flying = if_else(type1 == "flying", 1, if_else(type2 == "flying", 1, 0, missing = 0)),
+    is_steel = if_else(type1 == "steel", 1, if_else(type2 == "steel", 1, 0, missing = 0))
+    )
+
+stats_long <- stats_data |>
+  pivot_longer(cols = HP:Speed, names_to = "stats", values_to = "count") 
+```
+
+# Overview
+
+Thank you for checking out my dashboard! I started off doing analyses on Pokemon data in my graduate program, and every couple of years or so I like to come back to see how I would handle an analysis of Pokemon from a different angle. 
+
+Here's what you can expect to find in this dashboard:
+
+* **Types by BST** - A ranking of each Pokemon's base total stats (BST) based on their type. Secondary types do count, so a Pokemon with dual-typing will appear twice in the 18 graphs
+  * Note: Arceus is only being counted as Normal, and Stellar type I'm not acknowledging as a type since only one Pokemon has it
+* **Generations by BST** - A ranking of each Pokemon's base total stats (BST) based on what generation they were released. I separated out Mega Evolutions into their own category (they made Gen 6 look too lopsided otherwise), and also put in a separate tab for Legendary Pokemon separately if you wanted to just compare them regardless of generation. Legendaries, however, are still in their respective generation in terms of ranking.
+* **Stat Comparison** - See the basic relationship between the core stats (HP through Speed) in scatter plot form through reactive Shiny components. I put in a basic outlier filter to kick out Pokemon with the most extreme stats, but you can turn it off if you want to see how it looks raw:      
+  * Shedinja (only 1 HP)
+  * Chansey and Blissey (250 and 255 HP, respectively)
+  * Shuckle (very high Defense and Special Defense, very low Attack, HP, and Speed)
+* **Pokedex Entries** - This returns, for each Pokemon, a summary of their Pokedex entry written in a humorous form following a lollipop chart of their base fighting statistics. I used Llama 3.1 8B with Ollama & Ollamar to programmatically accomplish this task, so I was able to take advantage of the recent advancements in the large language model space this time around
+
+I hope you enjoy!
+
+# Types by BST
+
+## Row {.tabset}
+
+### Normal
+
+```{r fig.width=6, fig.height=24}
+stats_data |>
+  filter(is_normal > 0, is_mega_evo < 1) |> 
+  lollipop_visualization()
+```
+
+### Fire
+
+```{r fig.width=6, fig.height=16}
+stats_data |>
+  filter(is_fire > 0, is_mega_evo < 1) |> 
+  lollipop_visualization()
+```
+
+### Water
+
+```{r fig.width=6, fig.height=28}
+stats_data |>
+  filter(is_water > 0, is_mega_evo < 1) |> 
+  lollipop_visualization()
+```
+
+### Grass
+
+```{r fig.width=6, fig.height=24}
+stats_data |>
+  filter(is_grass > 0, is_mega_evo < 1) |> 
+  lollipop_visualization()
+```
+
+### Ground
+
+```{r fig.width=6, fig.height=14}
+stats_data |>
+  filter(is_ground > 0, is_mega_evo < 1) |> 
+  lollipop_visualization()
+```
+
+### Rock
+
+```{r fig.width=6, fig.height=14}
+stats_data |>
+  filter(is_rock > 0, is_mega_evo < 1) |> 
+  lollipop_visualization()
+```
+
+### Ice
+
+```{r fig.width=6, fig.height=10}
+stats_data |>
+  filter(is_ice > 0, is_mega_evo < 1) |> 
+  lollipop_visualization()
+```
+
+### Electric
+
+```{r fig.width=6, fig.height=14}
+stats_data |>
+  filter(is_electric > 0, is_mega_evo < 1) |> 
+  lollipop_visualization()
+```
+
+### Psychic
+
+```{r fig.width=6, fig.height=21}
+stats_data |>
+  filter(is_psychic > 0, is_mega_evo < 1) |> 
+  lollipop_visualization()
+```
+
+### Ghost
+
+```{r fig.width=6, fig.height=14}
+stats_data |>
+  filter(is_ghost > 0, is_mega_evo < 1) |> 
+  lollipop_visualization()
+```
+
+### Dark
+
+```{r fig.width=6, fig.height=15}
+stats_data |>
+  filter(is_dark > 0, is_mega_evo < 1) |> 
+  lollipop_visualization()
+```
+
+### Fighting
+
+```{r fig.width=6, fig.height=14}
+stats_data |>
+  filter(is_fighting > 0, is_mega_evo < 1) |> 
+  lollipop_visualization()
+```
+
+### Dragon
+
+```{r fig.width=6, fig.height=14}
+stats_data |>
+  filter(is_dragon > 0, is_mega_evo < 1) |> 
+  lollipop_visualization()
+```
+
+### Fairy
+
+```{r fig.width=6, fig.height=12}
+stats_data |>
+  filter(is_fairy > 0, is_mega_evo < 1) |> 
+  lollipop_visualization()
+```
+
+### Bug
+
+```{r fig.width=6, fig.height=16}
+stats_data |>
+  filter(is_bug > 0, is_mega_evo < 1) |> 
+  lollipop_visualization()
+```
+
+### Poison
+
+```{r fig.width=6, fig.height=16}
+stats_data |>
+  filter(is_poison > 0, is_mega_evo < 1) |> 
+  lollipop_visualization()
+```
+
+### Flying
+
+```{r fig.width=6, fig.height=20}
+stats_data |>
+  filter(is_flying > 0, is_mega_evo < 1) |> 
+  lollipop_visualization()
+```
+
+### Steel
+
+```{r fig.width=6, fig.height=13}
+stats_data |>
+  filter(is_steel > 0, is_mega_evo < 1) |> 
+  lollipop_visualization()
+```
+
+# Generations by BST
+
+## Row {.tabset}
+
+### Gen 1
+
+```{r fig.width=6, fig.height=24}
+stats_data |>
+  filter(Generation == "1") |> 
+  lollipop_visualization()
+```
+
+### Gen 2
+
+```{r fig.width=6, fig.height=18}
+stats_data |>
+  filter(Generation == "2") |> 
+  lollipop_visualization()
+```
+
+### Gen 3
+
+```{r fig.width=6, fig.height=24}
+stats_data |>
+  filter(Generation == "3") |> 
+  lollipop_visualization()
+```
+
+### Gen 4
+
+```{r fig.width=6, fig.height=20}
+stats_data |>
+  filter(Generation == "4") |> 
+  lollipop_visualization()
+```
+
+### Gen 5
+
+```{r fig.width=6, fig.height=24}
+stats_data |>
+  filter(Generation == "5") |> 
+  lollipop_visualization()
+```
+
+### Gen 6
+
+```{r fig.width=6, fig.height=12}
+stats_data |>
+  filter(Generation == "6", is_mega_evo < 1) |> 
+  lollipop_visualization()
+```
+
+### Gen 7
+
+```{r fig.width=6, fig.height=18}
+stats_data |>
+  filter(Generation == "7") |> 
+  lollipop_visualization()
+```
+
+### Gen 8
+
+```{r fig.width=6, fig.height=24}
+stats_data |>
+  filter(Generation == "8") |> 
+  lollipop_visualization()
+```
+
+### Gen 9
+
+```{r fig.width=6, fig.height=20}
+stats_data |>
+  filter(Generation == "9") |> 
+  lollipop_visualization()
+```
+
+### Megas
+
+```{r fig.width=6, fig.height=8}
+stats_data |>
+  filter(is_mega_evo > 0) |> 
+  lollipop_visualization()
+```
+
+### Legendaries
+
+```{r fig.width=6, fig.height=15}
+stats_data |>
+  filter(is_legendary > 0, is_mega_evo < 1) |> 
+  lollipop_visualization()
+```
+
+# Stat Comparison
+
+## {.toolbar}
+
+```{r}
+selectInput('stats_x_axis', 'X-Axis', c("HP", "Attack", "Defense", "Special Attack", "Special Defense", "Speed"), selected = "HP")
+
+selectInput('stats_y_axis', 'Y-Axis', c("HP", "Attack", "Defense", "Special Attack", "Special Defense", "Speed"), selected = "Attack")
+
+selectInput('filter_outliers', 'Filter Outliers?', c("Yes", "No"))
+
+#selectInput('size_scatter', 'Size', c("Total"))
+```
+
+## Row
+
+```{r}
+plotlyOutput('stat_compare')
+```
+
+# Entries
+
+## Row {height=35%}
+
+```{r}
+selectInput('pokemon_name', 'Pokemon', pokedex_data$Pokemon) 
+
+textOutput('pokedex_entry')
+```
+
+## Row {height=65%}
+
+```{r}
+plotlyOutput('pkmn_stats')
+```
+
+
+```{r}
+#| context: server
+
+### REACTIVE COMPONENTS ###
+pokedex_entry <- reactive({
+  pokedex_data |> 
+    filter(Pokemon == input$pokemon_name) |> 
+    select(Summarized_Entry) |> 
+    pull()
+})
+
+
+### PLOTLY IMAGES ###
+output$pkmn_stats <- renderPlotly({
+  stats_indiv <- stats_long |>
+    filter(name == input$pokemon_name)
+
+  title <- paste(head(stats_indiv$name, 1), "Statistics")
+  
+  type <- stats_data |> 
+    filter(name == input$pokemon_name) |> 
+    select(type1) |> 
+    pull()
+  
+  fill_color <- case_when(
+    type == 'grass' ~ '#7AC74C',
+    type == 'fire' ~ '#EE8130',
+    type == 'water' ~ '#6390F0',
+    type == 'fighting' ~ '#C22E28',
+    type == 'poison' ~ '#A33EA1',
+    type == 'normal' ~ '#A8A77A',
+    type == 'ice' ~ '#96D9D6',
+    type == 'dark' ~ '#705746',
+    type == 'steel' ~ '#B7B7CE',
+    type == 'fairy' ~ '#D685AD',
+    type == 'psychic' ~ '#F95587',
+    type == 'rock' ~ '#B6A136',
+    type == 'ghost' ~ '#735797', 
+    type == 'bug' ~ '#A6B91A',
+    type == 'dragon' ~ '#6F35FC',
+    type == 'flying' ~ '#A98FF3',
+    type == 'ground' ~ '#E2BF65',
+    type == 'electric' ~ '#F7D02C',
+    TRUE ~ 'black'
+  )
+  
+  p <- stats_indiv |> 
+    mutate(stats = forcats::fct_reorder(stats, count)) |> 
+    ggplot(aes(y = stats, x = count)) +
+    geom_segment(aes(x=0, y = stats, xend = count, yend = stats), color = "grey50") +
+    geom_point(color = fill_color, size = 2) +
+    xlim(0, 255) +
+    labs(title = title, x = "Value", y = "") +
+    theme(panel.background = element_rect(fill = 'white'))
+  
+  ggplotly(p)
+  
+})
+
+output$stat_compare <- renderPlotly({
+  x_var <- sym(input$stats_x_axis)
+  y_var <- sym(input$stats_y_axis)
+  #size_var <- sym(input$size_scatter)
+  
+  df <- stats_data
+  
+  if(input$filter_outliers == "Yes") {
+    df <- df |> 
+      filter(!name %in% c("Chansey", "Blissey", "Shuckle", "Shedinja"))
+  }
+  
+  p <- df |>
+    ggplot(aes(x = !!x_var, y = !!y_var)) + #, size = !!size_var
+    geom_smooth(span = .2, se=FALSE) +
+    geom_jitter(aes(name = name), alpha = .6) +
+    labs(title = "Stat Comparison")
+  
+  ggplotly(p) #, tooltip = c("name", "x", "y")
+  
+})
+
+output$pokedex_entry <- renderText({
+  pokedex_entry()
+})
+```
+

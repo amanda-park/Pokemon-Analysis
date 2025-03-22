@@ -1,0 +1,58 @@
+---
+title: "Local LLM Example"
+author: "Amanda Park"
+format: html
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = FALSE)
+
+set.seed(42)
+
+library(janitor)
+library(tidyverse)
+library(DT)
+library(plotly)
+library(ollamar)
+library(readxl)
+
+df <- readxl::read_excel("data/Pokedex_Entries_Gen9_DLC.xlsx")
+
+df_combined <- df |> 
+  group_by(Pokemon) |> 
+  summarize(All_Entries = paste(PokedexEntry, collapse = ' ')) 
+```
+
+```{r}
+test_connection()
+#pull("llama3.1") #run to download 8b model locally
+
+#list available models
+list_models()
+
+# #run the llm
+# resp <- generate("llama3.1", "Write a one-sentence story.") 
+# 
+# #Get just text from response
+# txt <- resp_process(resp, "text")
+# 
+# #Get text as a tibble dataframe
+# df_llm <- resp_process(resp, "df")
+# 
+# resp$response
+```
+
+```{r}
+prompt <- "I am going to give you a text output of Pokedex entries for a specific Pokemon. I want you to summarize the Pokedex entries in a couple of sentences in a humorous manner."
+
+df_summary <- df_combined |> 
+  mutate(prompt=paste(
+    "\n\nI'm going to give you a Pokemon's Pokedex entries across the generations.",
+    "Can you summarize these entries in a humorous way in 2 sentences?",
+    "\n\nPokemon: ", Pokemon, "\n\nEntry: ", All_Entries)) |> 
+    mutate(Summarized_Entry = purrr::map_chr(prompt, \(x) generate("llama3.1", prompt = x, output = "text"))) |> 
+  select(-prompt)
+
+writexl::write_xlsx(df_summary, "Pokedex_Entries_Humorous_Summaries.xlsx")
+```
+
