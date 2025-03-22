@@ -1,8 +1,8 @@
 # Pokemon-Analysis
 
-A compilation of various Pokemon analyses I have worked on over the years. Included in this repo are the following (all created in R):
+This repo serves as a compilation of various Pokemon analyses I have worked on over the years. Starting from a Pokemon analysis I completed way back in grad school, I go back to this topic every couple of years and compare how I would tackle analyses now compared to the past (hence why there are yearly dates tied to the folders). It's served as a good benchmark to remind me how far I've come these past few years in terms of my skillset.
 
-* Scraping web data for Pokedex information using rvest
-* Sentiment Analysis on above-mentioned scraped Pokedex data
-* A simple Shiny app built on a combination of Pokedex and Pokemon data
-* A logistic regression analysis on Pokemon combat statistics (project from grad school; includes Shiny components in deployed version)
+* 2019 - A logistic regression analysis on Pokemon combat statistics. This was originally a project from grad school that was written in LaTeX, but I converted it to R Markdown as that offered more versatility. [Link](https://amandapark.shinyapps.io/PokemonAnalysis/)
+* 2020 - I developed an interest in sentiment analysis and did some web scraping to pull data for each Pokemon's Pokedex entry across each of the different Pokemon games.
+* 2021 - I built a Shiny dashboard to visualize some of most common words in each Pokemon's Pokedex entry and various breakdowns of such (Generation, Pokemon Type, etc). [Link](https://amandapark.shinyapps.io/PokedexNLPAnalysis/)
+* 2024 - Decided to use Llama 3.1 to summarize all the different Pokedex entries into a funny summary, and built a Quarto dashboard to provide breakdowns for each Pokemon across the 9 generations. I also cleaned up the dataset so that different "types" of the same Pokemon were handled in a clearer way. Example: Diglett has a variant called "Alolan Diglett" but also shows up in Gen 9 as another Pokemon called "Wiglett". The base Pokemon name is Diglett across all three of these Pokemon, but its actual name will be represented based on traditional Pokemon labeling strategies. [Link](https://amandapark.shinyapps.io/PokedexDashboard2024Edition/)
